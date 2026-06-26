@@ -51,12 +51,12 @@ Create the full directory and file structure with empty stubs. Nothing runs yet,
 Build `config.py` so all settings live in one place and credentials load cleanly from the environment.
 
 **Tasks:**
-- [ ] Write `config.py`:
+- [x] Write `config.py`:
    - Load env vars via `python-dotenv` at the top
    - Define `WATCHLIST` with placeholder SeatGeek IDs and SeatPick slugs for at least 2 World Cup games
    - Define `NTFY_TOPIC`, `SEATGEEK_CLIENT_ID`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `ALERT_EMAIL` — all loaded from `os.environ`
    - Raise a clear `EnvironmentError` at startup if any required env var is missing
-- [ ] Create `.env` locally (not committed) with real values for development
+- [x] Create `.env` locally (not committed) with real values for development
 
 **Done when:** `python config.py` runs without error and prints loaded config cleanly.
 
@@ -67,16 +67,16 @@ Build `config.py` so all settings live in one place and credentials load cleanly
 Build and test the SeatGeek API fetcher in isolation.
 
 **Tasks:**
-- [ ] Write `sources/seatgeek.py`:
+- [x] Write `sources/seatgeek.py`:
    - Function: `get_lowest_price(seatgeek_id: str, client_id: str) -> dict | None`
    - Hits `GET https://api.seatgeek.com/2/events/{id}?client_id=...`
    - Extracts `stats.lowest_price` from the response
    - Returns `{"price": float, "url": str, "source": "SeatGeek"}` on success
    - Returns `None` on any failure (bad status, missing field, network error) — logs the error
-- [ ] Find real SeatGeek event IDs for the games in the watchlist:
+- [ ] Find real SeatGeek event IDs for the games in the watchlist: *(blocked — API key pending)*
    - Use `GET /events?q=world+cup+2026&type=sports&client_id=...` to search
    - Update `WATCHLIST` in `config.py` with real IDs
-- [ ] Test manually: run a quick script that imports and calls `get_lowest_price()` and prints the result
+- [x] Test manually: run a quick script that imports and calls `get_lowest_price()` and prints the result
 
 **Done when:** `get_lowest_price()` returns a real price for at least one World Cup game.
 
@@ -87,16 +87,16 @@ Build and test the SeatGeek API fetcher in isolation.
 Build and test the SeatPick scraper in isolation.
 
 **Tasks:**
-- [ ] Inspect `https://seatpick.com/{slug}` in a browser — find the HTML element that holds the lowest price
-- [ ] Write `sources/seatpick.py`:
+- [x] Inspect `https://seatpick.com/{slug}` in a browser — find the HTML element that holds the lowest price
+- [x] Write `sources/seatpick.py`:
    - Function: `get_lowest_price(slug: str) -> dict | None`
    - Fetches `https://seatpick.com/{slug}` with a realistic `User-Agent` header
    - Parses the lowest price using BeautifulSoup
    - Strips `$` and commas, casts to float
    - Returns `{"price": float, "url": str, "source": "SeatPick"}` on success
    - Returns `None` on any exception or missing price — logs a warning, never raises
-- [ ] Find real SeatPick slugs for the games in the watchlist and update `config.py`
-- [ ] Test manually: call `get_lowest_price()` and print the result
+- [x] Find real SeatPick slugs for the games in the watchlist and update `config.py`
+- [x] Test manually: call `get_lowest_price()` and print the result
 
 **Done when:** `get_lowest_price()` returns a real price for at least one World Cup game.
 
