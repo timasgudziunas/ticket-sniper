@@ -14,10 +14,11 @@ HEADERS = {
 }
 
 
-def get_lowest_price(slug: str) -> dict | None:
+def get_lowest_price(slug: str, quantity: int = 1) -> dict | None:
     url = f"{BASE_URL}/{slug}"
+    params = {"qty": quantity} if quantity > 1 else {}
     try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
+        r = requests.get(url, headers=HEADERS, params=params, timeout=15)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
 
@@ -34,12 +35,15 @@ def get_lowest_price(slug: str) -> dict | None:
                     raw = cells[low_idx].get_text(strip=True)
                     cleaned = raw.replace("US$", "").replace("$", "").replace(",", "").strip()
                     if cleaned:
-                        prices.append(float(cleaned))
+                        try:
+                            prices.append(float(cleaned))
+                        except ValueError:
+                            pass
             if prices:
-                return {"price": min(prices), "url": url, "source": "SeatPick"}
+                return {"price": min(prices), "url": r.url, "source": "SeatPick", "quantity": quantity}
 
-        logger.warning(f"SeatPick {slug}: no price table found on page")
+        logger.warning(f"SeatPick {slug} qty={quantity}: no price table found on page")
         return None
     except Exception as e:
-        logger.warning(f"SeatPick {slug}: {e}")
+        logger.warning(f"SeatPick {slug} qty={quantity}: {e}")
         return None

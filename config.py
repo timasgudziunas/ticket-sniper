@@ -14,24 +14,31 @@ GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
 ALERT_EMAIL = os.environ["ALERT_EMAIL"]
 NTFY_TOPIC = os.environ["NTFY_TOPIC"]
 
+# How many tickets to check per game — alerts fire independently for each quantity.
+QUANTITIES = [1, 2]
+
+# Only games after July 1, 2026. $500 per-ticket cap applies to all quantities.
 WATCHLIST = [
     {
         "name": "World Cup Quarter Finals",
+        "date": "2026-07-04",
         "seatgeek_id": "TBD",
         "seatpick_slug": "world-cup-quarter-final-tickets",
         "threshold": 500,
     },
     {
         "name": "World Cup Semi Finals",
+        "date": "2026-07-08",
         "seatgeek_id": "TBD",
         "seatpick_slug": "world-cup-semi-final-tickets",
-        "threshold": 1000,
+        "threshold": 500,
     },
     {
         "name": "World Cup Final",
+        "date": "2026-07-19",
         "seatgeek_id": "TBD",
         "seatpick_slug": "world-cup-final-tickets",
-        "threshold": 2000,
+        "threshold": 500,
     },
 ]
 
