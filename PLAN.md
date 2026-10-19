@@ -80,6 +80,8 @@ Build and test the SeatGeek API fetcher in isolation.
 
 **Done when:** `get_lowest_price()` returns a real price for at least one World Cup game.
 
+> **Note (2026-07-18 audit):** never actually met. `SEATGEEK_CLIENT_ID` has been set to `"mock"` in `.env` since this phase, so `sources/seatgeek.py` has never returned a real price. The real API code path exists (see the qty==1 and qty>1 branches) but is completely unverified against the live API.
+
 ---
 
 ## Phase 4 — SeatPick Source
@@ -100,6 +102,8 @@ Build and test the SeatPick scraper in isolation.
 
 **Done when:** `get_lowest_price()` returns a real price for at least one World Cup game.
 
+> **Note (2026-07-18 audit + live verification):** the "found real slugs" claim above is not accurate. The three slugs are generic guesses, never confirmed by hand against real seatpick.com pages. A live `tracker.py` run on 2026-07-18 showed two of the three ("world-cup-quarter-final-tickets", "world-cup-semi-final-tickets") return no price table at all. The third ("world-cup-final-tickets") happens to resolve to a page with a real price table, but that was luck, not verification. Treat all three as unverified placeholders.
+
 ---
 
 ## Phase 5 — Notifier
@@ -107,16 +111,18 @@ Build and test the SeatPick scraper in isolation.
 Build and test both alert channels in isolation.
 
 **Tasks:**
-- [ ] Write `notifier.py`:
-   - `send_ntfy(message: str) -> None` — HTTP POST to `https://ntfy.sh/{NTFY_TOPIC}` with the message as body
+- [x] Write `notifier.py`:
+   - `send_ntfy(title: str, message: str) -> None` — HTTP POST to `https://ntfy.sh/{NTFY_TOPIC}` with Priority: high
    - `send_email(subject: str, body: str) -> None` — Gmail SMTP using `smtplib`, TLS on port 587
-   - `send_alert(game_name: str, price: float, url: str, source: str, all_prices: dict) -> None` — formats the message and calls both `send_ntfy` and `send_email`
-- [ ] Format the alert message as specified in `CLAUDE.md`
-- [ ] Test both channels manually:
-   - Call `send_ntfy("test message")` → confirm push arrives on phone
-   - Call `send_email("test subject", "test body")` → confirm email arrives in inbox
+   - `send_alert(game_name, price, url, source, quantity, threshold, all_prices) -> None` — formats message for 1 vs 2 tickets and calls both channels
+- [x] Format the alert message as specified in `CLAUDE.md` (adapted for quantity label in title/subject)
+- [x] Test both channels manually:
+   - `send_ntfy` confirmed delivered to ntfy app ✓
+   - `send_email` confirmed received in inbox ✓
 
-**Done when:** Both a phone push and an email land successfully in test runs.
+**Done when:** Both a phone push and an email land successfully in test runs. ✓
+
+> **Note (2026-07-18 audit):** the work described above was real, but it was never committed. As of the last commit before this refactor, `notifier.py` was a 0 byte empty stub in git; the working code only existed uncommitted on disk. Re-verified working on 2026-07-18 as part of the event-agnostic refactor (Phase 9) — see that phase for the fresh test results.
 
 ---
 
@@ -125,20 +131,21 @@ Build and test both alert channels in isolation.
 Wire everything together in `tracker.py`.
 
 **Tasks:**
-- [ ] Write `tracker.py`:
+- [x] Write `tracker.py`:
    - Import `config`, both sources, and `notifier`
-   - Loop through `WATCHLIST`
-   - For each game: call `seatgeek.get_lowest_price()` and `seatpick.get_lowest_price()` 
-   - Collect all non-`None` results, find the minimum price across both
-   - If minimum price ≤ game's threshold: call `notifier.send_alert()` with the winning result and all prices for context
-   - Log every run: timestamp, game name, prices from each source, whether alert fired
-   - If all sources return `None` for a game: log a warning, skip — do not alert
-- [ ] Run `tracker.py` end-to-end locally:
-   - Temporarily lower a threshold below current market price to force an alert
-   - Confirm both ntfy push and email arrive with correct content
-   - Restore threshold to real value
+   - Loop through `WATCHLIST` × `QUANTITIES` — separate alert per (game, quantity) pair
+   - For each pair: call both sources, collect non-`None` results, find minimum price
+   - If minimum price ≤ threshold: call `notifier.send_alert()` with all prices for context
+   - Log every run: timestamp, game, quantity, prices from each source, whether alert fired
+   - If all sources return `None` for a pair: log a warning, skip — do not alert
+- [x] Run `tracker.py` end-to-end locally:
+   - Mock SeatGeek prices ($210/$230) triggered alerts on all 3 games × 2 quantities ✓
+   - ntfy pushes confirmed sent (no errors) ✓
+   - Emails confirmed sent ✓
 
-**Done when:** Full end-to-end run works locally, alert fires correctly when threshold is crossed.
+**Done when:** Full end-to-end run works locally, alert fires correctly when threshold is crossed. ✓
+
+> **Note (2026-07-18 audit):** same situation as Phase 5 — `tracker.py` was a 0 byte empty stub in the last commit before this refactor, despite this checklist saying it was written and tested. Re-verified working on 2026-07-18 as part of the event-agnostic refactor (Phase 9).
 
 ---
 
@@ -189,6 +196,24 @@ Confirm everything is solid before leaving it to run unattended.
 - [ ] Confirm SeatPick scraper graceful fallback: temporarily break the slug in config, verify run completes on SeatGeek-only with a logged warning (not a crash)
 - [ ] Confirm threshold alert end-to-end one more time in CI: temporarily lower a threshold, trigger `workflow_dispatch`, confirm ntfy + email both arrive
 - [ ] Restore correct thresholds
-- [ ] Update `WATCHLIST` in `config.py` with all remaining World Cup games you want to track
+- [ ] Update `watchlist.toml` with all remaining events you want to track
 
 **Done when:** Three consecutive automated runs complete cleanly in Actions logs with no errors.
+
+---
+
+## Phase 9 — Generalize Beyond World Cup (Event-Agnostic Refactor)
+
+Done out of order relative to the original plan: scheduling (Phase 7) isn't worth setting up until the tool can watch more than a hardcoded World Cup list, so this generalization happened first. Turns "add an event" into a config-only edit and "add a new ticket site" into one new module plus a `config.KNOWN_SOURCES` entry and a `tracker.SOURCES` registry line, instead of watchlist edits inside `config.py` and hardcoded source calls in `tracker.py`.
+
+**Tasks:**
+- [x] Create `watchlist.toml` holding the watchlist (migrated the three existing World Cup entries as-is) and `default_quantities`, with comments showing how to copy a block for a new event
+- [x] `config.py`: keep env loading and fail fast on missing vars; add `load_watchlist()` that parses `watchlist.toml` with stdlib `tomllib`, validates the schema (crashes with a clear `ValueError` on unknown source keys, missing threshold, bad types, etc.), and exposes `config.EVENTS`; `python config.py` still prints a summary
+- [x] `tracker.py`: build a `SOURCES` registry dict mapping `"seatgeek"`/`"seatpick"` to adapter functions with a uniform `(source_cfg, quantity) -> dict | None` signature, loop `event["sources"].items()` and dispatch through the registry; a source returning `None` is logged and skipped, an unknown source key crashes at config load, not here
+- [x] `sources/seatgeek.py`: removed the hardcoded `fifa-world-cup-tickets` fallback URL from the real API qty>1 path (was a bug — it silently mislabeled every multi ticket alert with a World Cup link regardless of the actual event); event URL is now derived from the API response or a generic `seatgeek.com/e/events/{id}` link; mock URL is now event neutral
+- [x] `notifier.py`: `qty_label` now generic for any quantity (`_qty_label()` helper), not just hardcoded "1 ticket" / "2 adjacent tickets"; `__main__` test block unchanged
+- [x] Verified `python config.py` prints the parsed watchlist correctly
+- [x] Verified `python tracker.py` runs end to end in mock mode with no errors; all 6 (event, quantity) pairs alerted since mock prices ($210/$230) are below the $500 threshold; SeatPick's live scraper ran for real in the same pass and correctly returned `None` (logged, skipped) for two of the three unverified slugs
+- [x] Ran `python notifier.py` once; both `send_ntfy` and `send_email` logged success with no errors, exit code 0
+
+**Done when:** Adding a new event is a `watchlist.toml` only edit and adding a new source site is one new module plus a `config.KNOWN_SOURCES` entry and a `tracker.SOURCES` registry line. ✓ (2026-07-18)

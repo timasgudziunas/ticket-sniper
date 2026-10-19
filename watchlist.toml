@@ -1,0 +1,47 @@
+# ticket-sniper watchlist
+#
+# Add an event by copying one [[events]] block below and editing the values.
+# No code changes needed - config.py loads this file at import time and
+# tracker.py checks every event listed here on every run.
+#
+# Each event needs:
+#   name       - display name, shown in logs and alerts
+#   date       - informational only, not used by the tracker
+#   threshold  - dollars per ticket; alert fires at or below this price
+#   quantities - optional list of ticket counts to check separately
+#                (falls back to default_quantities below if omitted)
+#   [events.sources] - one sub-table per site to check for this event.
+#                       Known sources: seatgeek (needs "id"), seatpick
+#                       (needs "slug"). An unknown source name here will
+#                       crash config loading with a clear error - that is
+#                       intentional, it catches typos early.
+
+# Used by any event that does not set its own "quantities".
+default_quantities = [1, 2]
+
+[[events]]
+name = "World Cup Quarter Finals"
+date = "2026-07-04"
+threshold = 500
+
+[events.sources]
+seatgeek = { id = "TBD" }
+seatpick = { slug = "world-cup-quarter-final-tickets" }
+
+[[events]]
+name = "World Cup Semi Finals"
+date = "2026-07-08"
+threshold = 500
+
+[events.sources]
+seatgeek = { id = "TBD" }
+seatpick = { slug = "world-cup-semi-final-tickets" }
+
+[[events]]
+name = "World Cup Final"
+date = "2026-07-19"
+threshold = 500
+
+[events.sources]
+seatgeek = { id = "TBD" }
+seatpick = { slug = "world-cup-final-tickets" }

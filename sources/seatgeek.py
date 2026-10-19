@@ -6,7 +6,22 @@ logger = logging.getLogger(__name__)
 _MOCK_PRICES = {
     "default": {1: 210.0, 2: 230.0},
 }
-_MOCK_URL = "https://seatgeek.com/fifa-world-cup-tickets"
+_MOCK_URL = "https://seatgeek.com/e/mock-event"
+
+
+def _fallback_event_url(seatgeek_id: str) -> str:
+    return f"https://seatgeek.com/e/events/{seatgeek_id}"
+
+
+def _event_url_from_listings(seatgeek_id: str, listings: list[dict]) -> str:
+    # Each listing may carry a nested "event" object with its own url/slug.
+    for listing in listings:
+        event = listing.get("event") or {}
+        if event.get("url"):
+            return event["url"]
+        if event.get("slug"):
+            return f"https://seatgeek.com/{event['slug']}"
+    return _fallback_event_url(seatgeek_id)
 
 
 def get_lowest_price(seatgeek_id: str, client_id: str, quantity: int = 1) -> dict | None:
@@ -26,7 +41,9 @@ def get_lowest_price(seatgeek_id: str, client_id: str, quantity: int = 1) -> dic
             if price is None:
                 logger.warning(f"SeatGeek {seatgeek_id} qty=1: no lowest_price in response")
                 return None
-            event_url = f"https://seatgeek.com/{data.get('slug', '')}"
+            event_url = data.get("url") or (
+                f"https://seatgeek.com/{data['slug']}" if data.get("slug") else _fallback_event_url(seatgeek_id)
+            )
         else:
             # Listings endpoint lets us filter to listings that can seat `quantity` together.
             url = "https://api.seatgeek.com/2/listings"
@@ -42,7 +59,7 @@ def get_lowest_price(seatgeek_id: str, client_id: str, quantity: int = 1) -> dic
                 logger.warning(f"SeatGeek {seatgeek_id} qty={quantity}: no listings found")
                 return None
             price = min(prices)
-            event_url = f"https://seatgeek.com/fifa-world-cup-tickets"
+            event_url = _event_url_from_listings(seatgeek_id, listings)
 
         return {"price": float(price), "url": event_url, "source": "SeatGeek", "quantity": quantity}
     except Exception as e:
