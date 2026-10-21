@@ -1,6 +1,6 @@
 # ticket-sniper HANDOFF
 
-**ARCHIVED 2026-10-19.** Retired to `projects/archives/` because the project stalled in June 2026, was never deployed on any scheduler, and the owner's attention moved elsewhere. No meaningful sessions occurred after the July 2026 event-agnostic refactor that is captured in the final commit.
+**ARCHIVED 2026-10-19.** Retired to `projects/archives/` because the project stalled in June 2026, was never deployed on any scheduler, and the owner's attention moved elsewhere. No meaningful sessions occurred after the July 2026 event-agnostic refactor that is captured in the final commit. **Closed out 2026-10-21:** archive commit pushed, GitHub repo archived (read-only). Nothing external ever existed to turn off.
 
 ---
 
